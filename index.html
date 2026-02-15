@@ -300,6 +300,32 @@
                     </form>
 
                     <h3
+                        style="margin-top: 30px; border-top: 1px solid var(--glass-border); padding-top: 20px; color: #ffae00;">
+                        Save to GitHub (Manual Sync)</h3>
+                    <div class="glass-panel"
+                        style="background: rgba(255,174,0,0.05); border-color: rgba(255,174,0,0.2);">
+                        <p style="font-size: 0.8rem; margin-bottom: 15px;">If you don't use Cloud Sync, you must
+                            download this file and upload it to GitHub to update the site for everyone.</p>
+                        <button onclick="downloadUpdatedAppJs()" class="action-btn"
+                            style="background: #ffae00; color: #000; font-weight: bold;">Download Updated
+                            app.js</button>
+                        <p style="font-size: 0.7rem; margin-top: 10px; color: #888;">After downloading, replace the old
+                            <code>app.js</code> in your GitHub repository.
+                        </p>
+                    </div>
+
+                    <h3
+                        style="margin-top: 30px; border-top: 1px solid var(--glass-border); padding-top: 20px; color: #0088ff;">
+                        Cloud Sync Status</h3>
+                    <div class="glass-panel"
+                        style="background: rgba(0,136,255,0.05); border-color: rgba(0,136,255,0.2);">
+                        <p style="font-size: 0.8rem; margin-bottom: 10px;">Your store is now connected to the Cloud
+                            Database. Updates will sync automatically across all devices.</p>
+                        <p id="cloud-status" style="font-size: 0.8rem; font-weight: bold; color: #00ff88;">Status: 🛰️
+                            Online (Synced)</p>
+                    </div>
+
+                    <h3
                         style="margin-top: 30px; border-top: 1px solid var(--glass-border); padding-top: 20px; color: var(--danger);">
                         Maintenance</h3>
                     <div class="glass-panel" style="background: rgba(255,0,0,0.05); border-color: rgba(255,0,0,0.2);">
@@ -312,6 +338,10 @@
             </div>
         </div>
     </template>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <script src="app.js"></script>
 </body>

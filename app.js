@@ -5,6 +5,27 @@ const DEFAULT_PRODUCTS = [
     { id: 3, name: "Gravity Pants", price: 45.00, qty: 40, desc: "Comfortable fit for zero-g environments.", image: null, category: "Bottoms", rating: 4, reviewCount: 1, reviews: [] }
 ];
 
+// Firebase Integration
+let firebaseDb = null;
+const firebaseConfig = {
+    apiKey: "AIzaSyCFS6OWFP7YsQIBpPShNu34aOQLUBWwBHs",
+    authDomain: "wkn-store.firebaseapp.com",
+    databaseURL: "https://wkn-store-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "wkn-store",
+    storageBucket: "wkn-store.firebasestorage.app",
+    messagingSenderId: "637642044431",
+    appId: "1:637642044431:web:7bc03d9111cfa9d6485f7a",
+    measurementId: "G-P4E2Z024EL"
+};
+
+try {
+    firebase.initializeApp(firebaseConfig);
+    firebaseDb = firebase.database();
+    console.log("Firebase Initialized with hardcoded config");
+} catch (e) {
+    console.error("Firebase Init Error:", e);
+}
+
 // State Management with safety
 const getStoredData = (key, fallback) => {
     try {
@@ -33,10 +54,45 @@ const state = {
 };
 
 // Utils
-const saveProducts = () => localStorage.setItem('products', JSON.stringify(state.products));
-const saveOrders = () => localStorage.setItem('orders', JSON.stringify(state.orders));
-const saveAdminPin = () => localStorage.setItem('adminPin', state.adminPin);
-const saveSettings = () => localStorage.setItem('storeSettings', JSON.stringify(state.settings));
+const saveProducts = () => {
+    localStorage.setItem('products', JSON.stringify(state.products));
+    if (firebaseDb) firebaseDb.ref('products').set(state.products);
+};
+const saveOrders = () => {
+    localStorage.setItem('orders', JSON.stringify(state.orders));
+    if (firebaseDb) firebaseDb.ref('orders').set(state.orders);
+};
+const saveAdminPin = () => {
+    localStorage.setItem('adminPin', state.adminPin);
+    if (firebaseDb) firebaseDb.ref('adminPin').set(state.adminPin);
+};
+const saveSettings = () => {
+    localStorage.setItem('storeSettings', JSON.stringify(state.settings));
+    if (firebaseDb) firebaseDb.ref('settings').set(state.settings);
+};
+
+// Initial Cloud Load & Sync
+if (firebaseDb) {
+    firebaseDb.ref('/').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            // If Firebase has data, use it to update local state
+            if (data.products) state.products = data.products;
+            if (data.orders) state.orders = data.orders;
+            if (data.settings) state.settings = data.settings;
+            if (data.adminPin) state.adminPin = data.adminPin;
+            render();
+            applySettings();
+        } else {
+            // If Firebase is empty (first time), upload current local state to Firebase
+            saveProducts();
+            saveOrders();
+            saveAdminPin();
+            saveSettings();
+        }
+    });
+}
+
 const formatCurrency = (val) => `$${parseFloat(val).toFixed(2)}`;
 
 // Router
@@ -742,6 +798,15 @@ function render() {
         document.getElementById('setting-store-name').value = state.settings.name || '';
         document.getElementById('setting-logo-url').value = state.settings.logo || '';
 
+        // Fill Cloud Config
+        const fbInput = document.getElementById('firebase-config');
+        if (fbInput) fbInput.value = localStorage.getItem('firebaseConfig') || '';
+        const cloudStatus = document.getElementById('cloud-status');
+        if (cloudStatus) {
+            cloudStatus.textContent = firebaseDb ? "Status: 🛰️ Online (Synced)" : "Status: 🏠 Offline (Local Only)";
+            cloudStatus.style.color = firebaseDb ? "#00ff88" : "#888";
+        }
+
         renderAdminProducts();
         renderOrders();
         adminView(state.currentAdminTab);
@@ -970,6 +1035,51 @@ function clearAllOrders() {
         saveOrders();
         showToast("Order history cleared.", "success");
         if (state.currentAdminTab === 'orders') renderOrders();
+    }
+}
+
+function saveCloudConfig() {
+    const configStr = document.getElementById('firebase-config').value.trim();
+    if (!configStr) {
+        localStorage.removeItem('firebaseConfig');
+        showToast("Cloud Sync disabled. Reloading...", "info");
+        setTimeout(() => location.reload(), 1500);
+        return;
+    }
+    try {
+        JSON.parse(configStr);
+        localStorage.setItem('firebaseConfig', configStr);
+        showToast("Cloud Sync Enabled! Reloading...", "success");
+        setTimeout(() => location.reload(), 1500);
+    } catch (e) {
+        showToast("Invalid JSON config format", "error");
+    }
+}
+
+async function downloadUpdatedAppJs() {
+    try {
+        const response = await fetch('app.js');
+        let content = await response.text();
+
+        // Update DEFAULT_PRODUCTS block
+        const productsJson = JSON.stringify(state.products, null, 4);
+        content = content.replace(/const DEFAULT_PRODUCTS = \[[\s\S]*?\];/, `const DEFAULT_PRODUCTS = ${productsJson};`);
+
+        // Update default state values if they exist in file or just the JSON blocks
+        // This is a bit complex for regex, but let's at least update the products.
+
+        const blob = new Blob([content], { type: 'application/javascript' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'app.js';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("Updated app.js downloaded! Now upload it to GitHub.", "success");
+    } catch (e) {
+        showToast("Error generating file", "error");
     }
 }
 
